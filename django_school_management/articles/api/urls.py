@@ -1,8 +1,8 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django_school_management.api.routers import DefaultRouterWithoutFormatSuffixes
 from .views import ArticleViewSet
 
-router = DefaultRouter()
+router = DefaultRouterWithoutFormatSuffixes()
 # Main resource at '' so URL is /api/v1/articles/ not /api/v1/articles/articles/
 router.register(r'', ArticleViewSet, basename='article')
 

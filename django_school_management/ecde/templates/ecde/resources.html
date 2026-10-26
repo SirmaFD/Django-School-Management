@@ -1,0 +1,196 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'ecde:dashboard' %}">County ECDE</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Planning &amp; resources</li>
+  </ol>
+</nav>
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+  <div>
+    <h4 class="mb-1">Planning and resources</h4>
+    <p class="text-muted mb-0">{{ centre.name }} — needs, annual plans, procurement, receipts, and inventory.</p>
+  </div>
+  <a class="btn btn-outline-secondary mt-2" href="{% url 'ecde:dashboard' %}">Back to ECDE</a>
+</div>
+
+<ul class="nav nav-pills mb-3">
+  <li class="nav-item"><a class="nav-link" href="#needs-assessments">Needs assessments</a></li>
+  <li class="nav-item"><a class="nav-link" href="#annual-plans">Annual plans &amp; budgets</a></li>
+  <li class="nav-item"><a class="nav-link" href="#procurement">Procurement &amp; receipts</a></li>
+  <li class="nav-item"><a class="nav-link" href="#distributions">Supply distributions</a></li>
+  <li class="nav-item"><a class="nav-link" href="#inventory">Inventory</a></li>
+</ul>
+
+<section class="layers bd bgc-white p-20 mb-3" id="needs-assessments">
+  <h5>Centre needs assessments</h5>
+  {% if can_manage_resources %}
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="create_assessment">
+    {{ assessment_form.non_field_errors }}
+    <div class="form-row">
+      {% for field in assessment_form %}
+      <div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary btn-sm" type="submit">Create assessment</button>
+  </form>
+  {% endif %}
+  {% for assessment in assessments %}
+  <details class="border rounded p-3 mb-2">
+    <summary>{{ assessment.assessment_year }} needs assessment — {{ assessment.get_status_display }} — {{ assessment.assessed_on }}</summary>
+    <p class="mt-2">{{ assessment.summary }}</p>
+    <ul>{% for need in assessment.needs.all %}
+      <li>{{ need.get_priority_display }}: {{ need.get_category_display }} — {{ need.description }}{% if need.quantity %} (Qty {{ need.quantity }}){% endif %}{% if need.estimated_cost %}, estimated {{ need.estimated_cost }}{% endif %}</li>
+    {% empty %}<li class="text-muted">No needs recorded yet.</li>{% endfor %}</ul>
+    {% if can_manage_resources and assessment.status == 'draft' %}
+    <form method="post" class="border rounded p-3 mb-2">
+      {% csrf_token %}<input type="hidden" name="action" value="add_need"><input type="hidden" name="assessment_id" value="{{ assessment.pk }}">
+      {{ need_form.non_field_errors }}
+      <div class="form-row">{% for field in need_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+      <button class="btn btn-outline-primary btn-sm" type="submit">Add assessed need</button>
+    </form>
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="submit_assessment"><input type="hidden" name="assessment_id" value="{{ assessment.pk }}"><button class="btn btn-primary btn-sm" type="submit">Submit assessment</button></form>
+    {% endif %}
+  </details>
+  {% empty %}<p class="text-muted">No needs assessments have been recorded.</p>{% endfor %}
+</section>
+
+<section class="layers bd bgc-white p-20 mb-3" id="annual-plans">
+  <h5>Annual plans and budgets</h5>
+  {% if can_manage_resources %}
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="create_plan">
+    {{ plan_form.non_field_errors }}
+    <div class="form-row">{% for field in plan_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+    <button class="btn btn-primary btn-sm" type="submit">Create annual plan</button>
+  </form>
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="add_budget_line">
+    <h6>Add budget line</h6>{{ budget_form.non_field_errors }}
+    <div class="form-row">{% for field in budget_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+    <button class="btn btn-outline-primary btn-sm" type="submit">Add budget line</button>
+  </form>
+  {% endif %}
+  {% for plan in plans %}
+  <div class="border rounded p-3 mb-2">
+    <div class="d-flex justify-content-between flex-wrap"><h6>{{ plan.year }} — {{ plan.title }}</h6><span class="badge badge-info">{{ plan.get_status_display }}</span></div>
+    <p>{{ plan.objectives }}</p>
+    <div class="table-responsive"><table class="table table-sm table-striped">
+      <thead><tr><th>Category</th><th>Budget item</th><th>Quantity</th><th>Unit cost</th><th>Total</th><th>Funding source</th></tr></thead>
+      <tbody>{% for line in plan.budget_lines.all %}<tr><td>{{ line.get_category_display }}</td><td>{{ line.description }}</td><td>{{ line.quantity }}</td><td>{{ line.unit_cost }}</td><td>{{ line.total_cost }}</td><td>{{ line.funding_source|default:"—" }}</td></tr>{% empty %}<tr><td colspan="6">No budget lines.</td></tr>{% endfor %}</tbody>
+      <tfoot><tr><th colspan="4">Budget total (KES)</th><th>{{ plan.budget_total }}</th><td></td></tr></tfoot>
+    </table></div>
+    {% if plan.review_notes %}<p><strong>Review notes:</strong> {{ plan.review_notes }}</p>{% endif %}
+    {% if can_manage_resources and plan.status == 'draft' %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="action" value="submit_plan"><input type="hidden" name="plan_id" value="{{ plan.pk }}"><button class="btn btn-primary btn-sm" type="submit">Submit plan for review</button></form>
+    {% elif can_approve_procurement and plan.status == 'submitted' %}
+    <form method="post" class="mt-2">{% csrf_token %}<input type="hidden" name="action" value="review_plan"><input type="hidden" name="plan_id" value="{{ plan.pk }}">
+      <div class="form-row">{% for field in decision_form %}<div class="form-group col-md-5"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+      <button class="btn btn-success btn-sm" type="submit">Save plan decision</button>
+    </form>
+    {% endif %}
+  </div>
+  {% empty %}<p class="text-muted">No annual plans have been created.</p>{% endfor %}
+</section>
+
+<section class="layers bd bgc-white p-20 mb-3" id="procurement">
+  <h5>Procurement requests and delivery receipts</h5>
+  {% if can_manage_resources %}
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="create_procurement">
+    {{ procurement_form.non_field_errors }}
+    <div class="form-row">{% for field in procurement_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+    <button class="btn btn-primary btn-sm" type="submit">Submit procurement request</button>
+  </form>
+  {% endif %}
+  {% for request_record in procurement_requests %}
+  <div class="border rounded p-3 mb-2">
+    <div class="d-flex justify-content-between flex-wrap"><h6>{{ request_record.title }}</h6><span class="badge badge-info">{{ request_record.get_status_display }}</span></div>
+    <p>{{ request_record.description }}</p>
+    <p><strong>Requested:</strong> KES {{ request_record.requested_amount }} · <strong>Submitted by:</strong> {{ request_record.requested_by|default:"—" }}{% if request_record.plan %} · <strong>Plan:</strong> {{ request_record.plan.year }}{% endif %}</p>
+    {% if request_record.approval_notes %}<p><strong>Approval notes:</strong> {{ request_record.approval_notes }}</p>{% endif %}
+    {% if can_approve_procurement and request_record.status == 'pending' %}
+    <form method="post" class="border rounded p-2 mb-2">{% csrf_token %}<input type="hidden" name="action" value="decide_procurement"><input type="hidden" name="procurement_id" value="{{ request_record.pk }}">
+      <div class="form-row">{% for field in decision_form %}<div class="form-group col-md-5"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+      <button class="btn btn-success btn-sm" type="submit">Save approval decision</button>
+    </form>
+    {% endif %}
+    {% if can_approve_procurement and request_record.status == 'approved' %}
+    <form method="post" class="mb-2">{% csrf_token %}<input type="hidden" name="action" value="mark_ordered"><input type="hidden" name="procurement_id" value="{{ request_record.pk }}"><button class="btn btn-outline-primary btn-sm" type="submit">Mark as ordered</button></form>
+    {% endif %}
+    <h6>Delivery receipts</h6>
+    <ul>{% for receipt in request_record.delivery_receipts.all %}<li>{{ receipt.received_on }} — {{ receipt.receipt_reference }} from {{ receipt.supplier }}: {{ receipt.items_received }} ({{ receipt.quantity_received }}) — {{ receipt.get_condition_display }}</li>{% empty %}<li class="text-muted">No receipts recorded.</li>{% endfor %}</ul>
+    {% if can_manage_resources and request_record.status == 'ordered' or can_manage_resources and request_record.status == 'approved' or can_manage_resources and request_record.status == 'part_received' %}
+    <form method="post" class="border rounded p-2">{% csrf_token %}<input type="hidden" name="action" value="record_receipt"><input type="hidden" name="procurement_id" value="{{ request_record.pk }}">
+      <h6>Record a delivery</h6>
+      <div class="form-row">{% for field in receipt_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+      <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="delivery_complete" id="delivery-complete-{{ request_record.pk }}"><label class="form-check-label" for="delivery-complete-{{ request_record.pk }}">This completes the delivery</label></div>
+      <button class="btn btn-outline-primary btn-sm" type="submit">Save delivery receipt</button>
+    </form>
+    {% endif %}
+  </div>
+  {% empty %}<p class="text-muted">No procurement requests have been submitted.</p>{% endfor %}
+</section>
+
+<section class="layers bd bgc-white p-20 mb-3" id="distributions">
+  <h5>County supply distributions</h5>
+  <p class="text-muted">Confirm what arrived at the centre. Confirmed quantities are added to centre inventory; report shortages or damaged supplies in the receipt condition and notes.</p>
+  {% for allocation in supply_allocations %}
+  <div class="border rounded p-3 mb-2">
+    <div class="d-flex justify-content-between flex-wrap">
+      <h6>{{ allocation.stock_item.name }} — {{ allocation.get_status_display }}</h6>
+      <span>{{ allocation.quantity_received }} of {{ allocation.quantity }} {{ allocation.stock_item.unit }} received</span>
+    </div>
+    <p class="mb-2">Allocated by {{ allocation.allocated_by|default:"—" }}{% if allocation.dispatched_at %} · Dispatched {{ allocation.dispatched_at }}{% endif %}{% if allocation.reference %} · Reference {{ allocation.reference }}{% endif %}</p>
+    <ul>{% for receipt in allocation.receipts.all %}
+      <li>{{ receipt.received_on }} — {{ receipt.receipt_reference }}: {{ receipt.quantity_received }} {{ allocation.stock_item.unit }} · {{ receipt.get_condition_display }}{% if receipt.notes %} — {{ receipt.notes }}{% endif %}</li>
+    {% empty %}<li class="text-muted">No delivery confirmation recorded.</li>{% endfor %}</ul>
+    {% if can_confirm_distributions %}
+    {% if allocation.status == 'dispatched' or allocation.status == 'part_received' %}
+    {% if not bound_distribution_allocation_id or bound_distribution_allocation_id == allocation.pk %}
+    <form method="post" class="border rounded p-3">
+      {% csrf_token %}<input type="hidden" name="action" value="confirm_distribution"><input type="hidden" name="allocation_id" value="{{ allocation.pk }}">
+      <h6>Confirm delivery received</h6>
+      {{ distribution_receipt_form.non_field_errors }}
+      <div class="form-row">{% for field in distribution_receipt_form %}
+        <div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+      {% endfor %}</div>
+      <button class="btn btn-primary btn-sm" type="submit">Confirm received quantity</button>
+    </form>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+  </div>
+  {% empty %}<p class="text-muted">No county supplies have been allocated to this centre.</p>{% endfor %}
+</section>
+
+<section class="layers bd bgc-white p-20" id="inventory">
+  <h5>Inventory (manual stock ledger)</h5>
+  <p class="text-muted">Confirmed county distribution receipts are added to stock automatically. Procurement receipts remain separate; record those and other verified stock changes here.</p>
+  {% if can_manage_resources %}
+  <form method="post" class="border rounded p-3 mb-3">{% csrf_token %}<input type="hidden" name="action" value="create_inventory_item">
+    <h6>Add inventory item</h6>{{ inventory_item_form.non_field_errors }}
+    <div class="form-row">{% for field in inventory_item_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+    <button class="btn btn-primary btn-sm" type="submit">Add item</button>
+  </form>
+  {% endif %}
+  {% for item in inventory_items %}
+  <details class="border rounded p-3 mb-2">
+    <summary>{{ item.name }} — {{ item.quantity_on_hand }} {{ item.unit }} on hand{% if item.reorder_level is not None and item.quantity_on_hand <= item.reorder_level %} <span class="badge badge-warning">Reorder level reached</span>{% endif %}</summary>
+    {% if item.notes %}<p class="mt-2">{{ item.notes }}</p>{% endif %}
+    <div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Date</th><th>Movement</th><th>Quantity</th><th>Usage purpose</th><th>Reference</th><th>Notes</th></tr></thead>
+      <tbody>{% for movement in item.movements.all %}<tr><td>{{ movement.moved_on }}</td><td>{{ movement.get_movement_type_display }}</td><td>{{ movement.quantity }} {{ item.unit }}</td><td>{{ movement.get_usage_purpose_display|default:"—" }}</td><td>{{ movement.reference|default:"—" }}</td><td>{{ movement.notes|default:"—" }}</td></tr>{% empty %}<tr><td colspan="6">No stock movements recorded.</td></tr>{% endfor %}</tbody>
+    </table></div>
+    {% if can_manage_resources %}
+    <form method="post" class="border rounded p-2">{% csrf_token %}<input type="hidden" name="action" value="record_inventory_movement"><input type="hidden" name="item_id" value="{{ item.pk }}">
+      <h6>Record stock movement</h6>{{ inventory_movement_form.non_field_errors }}
+      <div class="form-row">{% for field in inventory_movement_form %}<div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}</div>
+      <button class="btn btn-outline-primary btn-sm" type="submit">Save movement</button>
+    </form>
+    {% endif %}
+  </details>
+  {% empty %}<p class="text-muted">No inventory items recorded.</p>{% endfor %}
+</section>
+{% endblock dashboard-body %}

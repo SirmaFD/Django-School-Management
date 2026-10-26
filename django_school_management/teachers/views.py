@@ -17,17 +17,36 @@ from permission_handlers.administrative import (
 from permission_handlers.basic import user_is_teacher, user_is_verified
 from django_school_management.mixins.no_permission import LoginRequiredNoPermissionMixin
 from django_school_management.mixins.institute import get_user_institute
+from django_school_management.ecde.access import (
+    accessible_centres,
+    accessible_ecde_teachers,
+)
 
 
-@user_passes_test(user_is_teacher_or_administrative)
+@login_required
 def teachers_view(request):
     """
     :param request:
     :return: list of teachers to logged in user, login form instead.
     """
+    ecde_centres = accessible_centres(request.user)
+    can_access_legacy_directory = user_is_teacher_or_administrative(request.user)
+    if not can_access_legacy_directory and not ecde_centres.exists():
+        raise PermissionDenied
+
     institute = get_user_institute(request.user)
-    teachers = Teacher.objects.filter(institute=institute) if institute else Teacher.objects.all()
-    context = {'teachers': teachers}
+    if can_access_legacy_directory and institute:
+        teachers = Teacher.objects.filter(institute=institute)
+    elif can_access_legacy_directory:
+        teachers = Teacher.objects.all()
+    else:
+        teachers = Teacher.objects.none()
+
+    context = {
+        'teachers': teachers,
+        'ecde_teachers': accessible_ecde_teachers(request.user),
+        'can_add_teacher': user_is_admin_or_su(request.user),
+    }
     return render(request, 'teachers/teacher_list.html', context)
 
 

@@ -1,0 +1,40 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'account:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ecde:dashboard' %}">County ECDE</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ecde:manage_centres' %}">Manage centres</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Add centre</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+  <div>
+    <h4 class="mb-1">Register an ECDE centre</h4>
+    <p class="text-muted mb-0">Add a centre and record its registration, facilities, and service readiness.</p>
+  </div>
+  <a class="btn btn-outline-secondary mt-2" href="{% url 'ecde:manage_centres' %}">
+    <i class="fas fa-arrow-left mr-1"></i> Back to centre list
+  </a>
+</div>
+
+<section class="layers bd bgc-white p-20">
+  <form method="post">
+    {% csrf_token %}
+    {{ create_form.non_field_errors }}
+    <div class="form-row">
+      {% for field in create_form %}
+        <div class="form-group col-xl-3 col-md-4">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+        </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary" type="submit">Add centre</button>
+    <a class="btn btn-outline-secondary ml-2" href="{% url 'ecde:manage_centres' %}">Cancel</a>
+  </form>
+</section>
+{% endblock dashboard-body %}

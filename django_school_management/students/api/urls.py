@@ -1,8 +1,8 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django_school_management.api.routers import DefaultRouterWithoutFormatSuffixes
 from .views import StudentViewSet, AdmissionStudentViewSet
 
-router = DefaultRouter()
+router = DefaultRouterWithoutFormatSuffixes()
 router.register(r'applications', AdmissionStudentViewSet, basename='admission')
 router.register(r'', StudentViewSet, basename='student')
 

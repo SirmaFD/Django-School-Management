@@ -37,6 +37,7 @@ urlpatterns = [
     path('teachers/', include('django_school_management.teachers.urls')),
     path('result/', include('django_school_management.result.urls')),
     path('institute/', include('django_school_management.institute.urls')),
+    path('ecde/', include('django_school_management.ecde.urls')),
     path(
         'password-reset/',
         auth_views.PasswordResetView.as_view(

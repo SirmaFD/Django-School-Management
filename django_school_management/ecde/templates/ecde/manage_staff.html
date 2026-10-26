@@ -1,0 +1,121 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'account:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'teachers:all_teacher' %}">Teachers</a></li>
+    <li class="breadcrumb-item active" aria-current="page">ECDE staff access</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+  <div>
+    <h4 class="mb-1">ECDE staff access</h4>
+    <p class="text-muted mb-0">Assign staff roles and maintain ECDE teacher personnel profiles for your county.</p>
+  </div>
+  <a class="btn btn-outline-secondary mt-2" href="{% url 'teachers:all_teacher' %}">
+    <i class="fas fa-arrow-left mr-1"></i> Back to Teachers
+  </a>
+</div>
+
+<section class="layers bd bgc-white p-20 mb-3">
+  <h5>Assign ECDE access</h5>
+  <p class="text-muted">Select the role and assign exactly one matching area. Inactive assignments cannot access ECDE records.</p>
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_membership">
+    {{ membership_form.non_field_errors }}
+    <div class="form-row">
+      {% for field in membership_form %}
+        <div class="form-group col-xl-3 col-md-4{% if field.name == 'staff_number' %} border-top pt-2{% endif %}">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {{ field.errors }}
+        </div>
+      {% endfor %}
+    </div>
+    <button class="btn btn-primary" type="submit">Assign ECDE role</button>
+  </form>
+</section>
+
+<section class="layers bd bgc-white p-20 mb-3">
+  <h5>Personnel profiles</h5>
+  {% for staff in staff_profiles %}
+    <details class="border rounded p-2 mb-2">
+      <summary>{{ staff.membership.user.get_full_name|default:staff.membership.user.username }} — {{ staff.membership.centre.name }}</summary>
+      <form method="post" class="mt-3">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="update_teacher_profile">
+        <input type="hidden" name="object_id" value="{{ staff.membership.pk }}">
+        {{ staff.form.non_field_errors }}
+        <div class="form-row">
+          {% for field in staff.form %}
+            <div class="form-group col-md-4">
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {{ field.errors }}
+            </div>
+          {% endfor %}
+        </div>
+        <button class="btn btn-primary btn-sm" type="submit">Save personnel profile</button>
+      </form>
+    </details>
+  {% empty %}
+    <p class="text-muted mb-0">No ECDE teacher assignments are available in your county.</p>
+  {% endfor %}
+</section>
+
+<section class="layers bd bgc-white p-20">
+  <h5>ECDE access assignments</h5>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-hover">
+      <thead><tr><th>User</th><th>Role</th><th>Assigned area</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for membership in memberships %}
+        <tr>
+          <td>{{ membership.user.get_full_name|default:membership.user.username }}<br><small class="text-muted">{{ membership.user.email }}</small></td>
+          <td>{{ membership.get_role_display }}{% if membership.role == 'ecde_teacher' and membership.teacher_profile %}<br><small class="text-muted">{{ membership.teacher_profile.highest_qualification|default:"Qualification not recorded" }}{% if membership.teacher_profile.tsc_registration_number %} · TSC {{ membership.teacher_profile.tsc_registration_number }}{% endif %}</small>{% endif %}</td>
+          <td>
+            {% if membership.county %}{{ membership.county.name }}
+            {% elif membership.subcounty %}{{ membership.subcounty.name }}, {{ membership.subcounty.county.name }}
+            {% elif membership.ward %}{{ membership.ward.name }}, {{ membership.ward.subcounty.name }}
+            {% elif membership.centre %}{{ membership.centre.name }}, {{ membership.centre.ward.subcounty.name }}
+            {% endif %}
+          </td>
+          <td>{% if membership.is_active %}<span class="badge badge-success">Active</span>{% else %}<span class="badge badge-secondary">Inactive</span>{% endif %}</td>
+          <td>
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="toggle_membership">
+              <input type="hidden" name="object_id" value="{{ membership.pk }}">
+              <button class="btn btn-sm {% if membership.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}" type="submit">{% if membership.is_active %}Disable{% else %}Enable{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-muted">No ECDE role assignments yet.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const role = document.getElementById('id_role');
+    const profileFields = document.querySelectorAll('[data-ecde-teacher-profile]');
+    function updateProfileFields() {
+      const visible = role && role.value === 'ecde_teacher';
+      profileFields.forEach(function (field) {
+        const container = field.closest('.form-group');
+        if (container) container.hidden = !visible;
+      });
+    }
+    if (role) {
+      role.addEventListener('change', updateProfileFields);
+      updateProfileFields();
+    }
+  })();
+</script>
+{% endblock dashboard-body %}

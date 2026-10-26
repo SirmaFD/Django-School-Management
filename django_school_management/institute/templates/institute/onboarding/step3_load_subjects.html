@@ -42,11 +42,11 @@
 
 {% block onboarding_content %}
 <div class="onboarding-card">
-  <h2>Load Subjects from Curriculum</h2>
-  <p class="subtitle">Create {{ semester_label|lower }}s and subject groups from a curriculum (School/Madrasah, Science, Arts, Commerce). You can skip this and add subjects manually later.</p>
+  <h2>Set Up Classes and Learning Areas</h2>
+  <p class="subtitle">Choose a curriculum and the classes or levels your school offers. You can skip this and add learning areas later.</p>
 
   <div class="load-subjects-intro">
-    <strong>How it works:</strong> Choose a curriculum and the class ranges you offer. The system will create the {{ semester_label|lower }}s (if needed), create subjects from the curriculum library, and assign them to each of your {{ department_label|lower }}s for the selected {{ semester_label|lower }}s. For HSC, make sure your {{ department_label|lower }} names match the stream (e.g. Science, Arts, Commerce).
+    <strong>How it works:</strong> Choose a curriculum to see its available levels, then select the ones you offer. The system will create the corresponding {{ semester_label|lower }}s and subjects from the curriculum library. If you have created {{ department_label|lower }}s, it will also assign the subjects to them.
   </div>
 
   <form method="post">
@@ -60,15 +60,18 @@
     </div>
     <div class="form-group checkbox-group">
       <label>{{ form.class_range.label }}</label>
-      {{ form.class_range }}
+      <div id="class-range-options">{{ form.class_range }}</div>
       {% if form.class_range.errors %}
         <ul class="errorlist">{{ form.class_range.errors }}</ul>
       {% endif %}
+      <small class="helptext" id="class-range-help">
+        Select a curriculum to see its classes or levels.
+      </small>
     </div>
-    {% if load_result and load_result.subject_groups_created %}
+    {% if setup_complete %}
     <div class="load-result">
       <i class="fas fa-check-circle" style="color: var(--success); margin-right: 8px;"></i>
-      Subjects loaded. You can load more class ranges or continue to review.
+      Selected classes and learning areas are set up. You can choose more levels or continue to review.
     </div>
     {% endif %}
     <div class="onboarding-actions">
@@ -77,7 +80,7 @@
       </a>
       <div>
         <button type="submit" name="load_subjects" class="btn-load">
-          <i class="fas fa-download"></i> Load Subjects
+          <i class="fas fa-download"></i> Set Up Selected Classes
         </button>
         <button type="submit" class="btn-onboard btn-onboard-primary">
           Continue <i class="fas fa-arrow-right"></i>
@@ -86,4 +89,58 @@
     </div>
   </form>
 </div>
+{{ curriculum_level_choices|json_script:"curriculum-level-choices" }}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  const curriculumSelect = document.getElementById('id_curriculum');
+  const optionsContainer = document.getElementById('class-range-options');
+  const helpText = document.getElementById('class-range-help');
+  const levelChoices = JSON.parse(
+    document.getElementById('curriculum-level-choices').textContent
+  );
+
+  function renderLevels(selectedValues) {
+    const levels = levelChoices[curriculumSelect.value] || [];
+    optionsContainer.replaceChildren();
+
+    if (!levels.length) {
+      helpText.textContent = 'Select a curriculum to see its classes or levels.';
+      return;
+    }
+
+    const list = document.createElement('ul');
+    levels.forEach(function(level, index) {
+      const item = document.createElement('li');
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      const id = 'id_class_range_' + index;
+
+      checkbox.type = 'checkbox';
+      checkbox.name = 'class_range';
+      checkbox.value = level.value;
+      checkbox.id = id;
+      checkbox.checked = selectedValues.includes(level.value);
+
+      label.htmlFor = id;
+      label.append(checkbox, document.createTextNode(level.label));
+      item.appendChild(label);
+      list.appendChild(item);
+    });
+
+    optionsContainer.appendChild(list);
+    helpText.textContent = 'Select one or more classes or levels to set up.';
+  }
+
+  const selectedValues = Array.from(
+    optionsContainer.querySelectorAll('input[name="class_range"]:checked')
+  ).map(function(input) { return input.value; });
+  renderLevels(selectedValues);
+  curriculumSelect.addEventListener('change', function() {
+    renderLevels([]);
+  });
+})();
+</script>
 {% endblock %}

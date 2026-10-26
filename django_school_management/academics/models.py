@@ -82,6 +82,7 @@ class AcademicSession(ExportModelOperationsMixin('academic_session'), TimeStampe
 
 class Semester(ExportModelOperationsMixin('semester'), TimeStampedModel):
     number = models.PositiveIntegerField(unique=True)
+    display_name = models.CharField(max_length=50, blank=True)
     guide = models.ForeignKey(
         Teacher, on_delete=models.CASCADE,
         default=None, null=True, blank=True
@@ -95,6 +96,8 @@ class Semester(ExportModelOperationsMixin('semester'), TimeStampedModel):
         ordering = ['number', ]
 
     def __str__(self):
+        if self.display_name:
+            return self.display_name
         if self.number == 1:
             return '1st'
         if self.number == 2:

@@ -248,8 +248,8 @@ def onboarding_step3(request):
                         institute.save(update_fields=['curriculum'])
                         msg = (
                             f"Created {load_result.get('semesters_created', 0)} class(es), "
-                            f"{load_result.get('subjects_created', 0)} subject(s), "
-                            f"and {load_result.get('subject_groups_created', 0)} subject group(s)."
+                            f"{load_result.get('subjects_created', 0)} learning area(s), "
+                            f"and {load_result.get('subject_groups_created', 0)} class group(s)."
                         )
                         messages.success(request, msg)
         else:
@@ -258,7 +258,16 @@ def onboarding_step3(request):
 
     ctx = {
         'form': form,
+        'curriculum_level_choices': form.curriculum_level_choices,
         'load_result': load_result,
+        'setup_complete': bool(
+            load_result
+            and (
+                load_result.get('semesters_created')
+                or load_result.get('subjects_created')
+                or load_result.get('subject_groups_created')
+            )
+        ),
         'department_label': institute.department_label if institute else 'Department',
         'semester_label': institute.semester_label if institute else 'Class',
         **_onboarding_context(3),

@@ -1,0 +1,16 @@
+<form method="post" class="border rounded p-3 mt-2">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="update_centre">
+  <input type="hidden" name="object_id" value="{{ centre.pk }}">
+  {{ editor.form.non_field_errors }}
+  <div class="form-row">
+    {% for field in editor.form %}
+      <div class="form-group col-xl-3 col-md-4">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+  </div>
+  <button class="btn btn-primary btn-sm" type="submit">Save centre details</button>
+</form>

@@ -61,7 +61,7 @@
 {% block onboarding_content %}
 <div class="onboarding-card">
   <h2>Academic Structure</h2>
-  <p class="subtitle">Set up your {{ department_label|lower }}s and the current academic session.</p>
+  <p class="subtitle">Set up optional class groups and your current Kenyan academic year.</p>
 
   <form method="post">
     {% csrf_token %}
@@ -69,7 +69,7 @@
     {% if existing_departments %}
     <div style="margin-bottom: 20px;">
       <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted);">
-        Current {{ department_label }}s
+        Current class groups
       </label>
       <div>
         {% for dept in existing_departments %}
@@ -81,10 +81,10 @@
 
     <label style="font-weight: 600; margin-bottom: 12px; display: block;">
       <i class="fas fa-plus-circle" style="color: var(--primary); margin-right: 6px;"></i>
-      Add New {{ department_label }}s
+      Add class groups (optional)
     </label>
     <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">
-      Leave blank if you don't need to add more departments right now.
+      For example, add a group such as PP1 Blue or PP2 Green. You can leave this blank and create the class levels in the next step.
     </p>
 
     {{ dept_formset.management_form }}
@@ -97,21 +97,21 @@
         <div class="row">
           <div class="col-md-5">
             <div class="form-group mb-2">
-              <label class="mb-1">Name</label>
+              <label class="mb-1">Class group name</label>
               {{ dept_form.name }}
               {{ dept_form.name.errors }}
             </div>
           </div>
           <div class="col-md-3">
             <div class="form-group mb-2">
-              <label class="mb-1">Short Name</label>
+              <label class="mb-1">Short Name (optional)</label>
               {{ dept_form.short_name }}
               {{ dept_form.short_name.errors }}
             </div>
           </div>
           <div class="col-md-3">
             <div class="form-group mb-2">
-              <label class="mb-1">Code</label>
+              <label class="mb-1">School code (optional)</label>
               {{ dept_form.code }}
               {{ dept_form.code.errors }}
             </div>
@@ -122,7 +122,7 @@
     </div>
 
     <button type="button" class="add-dept-btn" id="add-dept">
-      <i class="fas fa-plus" style="margin-right: 6px;"></i> Add Another Department
+      <i class="fas fa-plus" style="margin-right: 6px;"></i> Add Another Class Group
     </button>
 
     <div class="section-divider">
@@ -136,7 +136,7 @@
             <label for="{{ session_form.year.id_for_label }}">Starting Year *</label>
             {{ session_form.year }}
             {{ session_form.year.errors }}
-            <small class="helptext">e.g. 2026 for the 2026-2027 session.</small>
+            <small class="helptext">Enter the starting year for your school's academic year.</small>
           </div>
         </div>
       </div>

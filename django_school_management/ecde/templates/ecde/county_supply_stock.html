@@ -1,0 +1,89 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'ecde:dashboard' %}">County ECDE</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ecde:manage' %}">Administration</a></li>
+    <li class="breadcrumb-item active" aria-current="page">County stock &amp; distribution</li>
+  </ol>
+</nav>
+<div class="mb-3">
+  <h4>County stock and centre distribution</h4>
+  <p class="text-muted">Manage county stock, allocate supplies to centres, and track dispatch and centre receipt confirmation.</p>
+</div>
+
+<section class="layers bd bgc-white p-20 mb-3">
+  <h5>County stock items</h5>
+  <p class="text-muted">Opening balance is the verified stock when this item is first entered. Use stock-in movements for later receipts. Distribution dispatches automatically reduce county stock.</p>
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="create_stock_item">
+    {{ stock_item_form.non_field_errors }}
+    <div class="form-row">{% for field in stock_item_form %}
+      <div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+    {% endfor %}</div>
+    <button class="btn btn-primary btn-sm" type="submit">Add county stock item</button>
+  </form>
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="stock_in">
+    <h6>Record county stock received</h6>{{ stock_in_form.non_field_errors }}
+    <div class="form-row">{% for field in stock_in_form %}
+      <div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+    {% endfor %}</div>
+    <button class="btn btn-outline-primary btn-sm" type="submit">Record stock-in</button>
+  </form>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped">
+      <thead><tr><th>County</th><th>Supply</th><th>Unit</th><th>On hand</th><th>Stock movements</th></tr></thead>
+      <tbody>
+      {% for item in items %}
+        <tr>
+          <td>{{ item.county.name }}</td><td>{{ item.name }}</td><td>{{ item.unit }}</td>
+          <td>{{ item.quantity_on_hand }}</td>
+          <td>{% for movement in item.movements.all %}{{ movement.moved_on }} {{ movement.get_movement_type_display }} {{ movement.quantity }}{% if movement.reference %} ({{ movement.reference }}){% endif %}{% if not forloop.last %}<br>{% endif %}{% empty %}Opening balance only{% endfor %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="5" class="text-muted">No county stock items yet.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="layers bd bgc-white p-20 mb-3">
+  <h5>Allocate supplies to a centre</h5>
+  <p class="text-muted">Create a draft allocation first. Dispatch will check and deduct the requested quantity from county stock. The centre manager then confirms the quantity received.</p>
+  <form method="post" class="border rounded p-3 mb-3">
+    {% csrf_token %}<input type="hidden" name="action" value="create_allocation">
+    {{ allocation_form.non_field_errors }}
+    <div class="form-row">{% for field in allocation_form %}
+      <div class="form-group col-md-4"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>
+    {% endfor %}</div>
+    <button class="btn btn-primary btn-sm" type="submit">Create draft allocation</button>
+  </form>
+  <div class="table-responsive">
+    <table class="table table-sm table-striped table-hover">
+      <thead><tr><th>Centre</th><th>County</th><th>Supply</th><th>Allocated</th><th>Received</th><th>Status</th><th>Reference / notes</th><th>Action</th></tr></thead>
+      <tbody>
+      {% for allocation in allocations %}
+        <tr>
+          <td>{{ allocation.centre.name }}</td>
+          <td>{{ allocation.centre.county.name }}</td>
+          <td>{{ allocation.stock_item.name }} ({{ allocation.stock_item.unit }})</td>
+          <td>{{ allocation.quantity }}</td>
+          <td>{{ allocation.quantity_received }}</td>
+          <td>{{ allocation.get_status_display }}</td>
+          <td>{{ allocation.reference|default:"—" }}{% if allocation.notes %}<br><small>{{ allocation.notes }}</small>{% endif %}</td>
+          <td>
+            {% if allocation.status == 'draft' %}
+            <form method="post" class="mb-1">{% csrf_token %}<input type="hidden" name="action" value="dispatch_allocation"><input type="hidden" name="allocation_id" value="{{ allocation.pk }}"><button class="btn btn-success btn-sm" type="submit">Dispatch</button></form>
+            <form method="post" onsubmit="return confirm('Cancel this draft allocation?');">{% csrf_token %}<input type="hidden" name="action" value="cancel_allocation"><input type="hidden" name="allocation_id" value="{{ allocation.pk }}"><button class="btn btn-outline-danger btn-sm" type="submit">Cancel</button></form>
+            {% elif allocation.status == 'dispatched' or allocation.status == 'part_received' %}
+            <a class="btn btn-outline-primary btn-sm" href="{% url 'ecde:resources' allocation.centre_id %}#distributions">View receipt</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% empty %}<tr><td colspan="8" class="text-muted">No supply allocations have been created.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock dashboard-body %}

@@ -130,35 +130,72 @@ def load_subjects_from_curriculum(institute, curriculum, class_numbers, created_
         return {'semesters_created': 0, 'subjects_created': 0, 'subject_groups_created': 0, 'errors': ['No curriculum selected.']}
 
     departments = list(institute.departments.filter(institute=institute))
-    if not departments:
-        return {'semesters_created': 0, 'subjects_created': 0, 'subject_groups_created': 0, 'errors': ['No departments/groups found. Add them in the previous step.']}
 
     BASE_CODE = 10000  # avoid clash with existing subject_code
     semesters_created = 0
     subjects_created = 0
     subject_groups_created = 0
     errors = []
+    level_names = {
+        level.level_number: level.name
+        for level in curriculum.levels.filter(level_number__in=class_numbers)
+    }
 
     for num in class_numbers:
         if 1 <= num <= 12:
             sem, created = Semester.objects.get_or_create(
                 number=num,
-                defaults={'created_by': created_by},
+                defaults={
+                    'created_by': created_by,
+                    'display_name': (
+                        level_names.get(num, '')
+                        if curriculum.code == 'KE-CBC-PP' else ''
+                    ),
+                },
             )
             if created:
                 semesters_created += 1
+            elif (
+                curriculum.code == 'KE-CBC-PP'
+                and not sem.display_name
+                and level_names.get(num)
+            ):
+                sem.display_name = level_names[num]
+                sem.save(update_fields=['display_name'])
 
-    for dept in departments:
-        for sem_num in class_numbers:
-            if sem_num < 1 or sem_num > 12:
-                continue
-            try:
-                semester = Semester.objects.get(number=sem_num)
-            except Semester.DoesNotExist:
-                errors.append(f'Semester {sem_num} not found.')
-                continue
+    for sem_num in class_numbers:
+        if sem_num < 1 or sem_num > 12:
+            continue
+        try:
+            semester = Semester.objects.get(number=sem_num)
+        except Semester.DoesNotExist:
+            errors.append(f'Semester {sem_num} not found.')
+            continue
+
+        if not departments:
             templates = get_subjects_for_level(
-                curriculum, sem_num,
+                curriculum,
+                sem_num,
+            )
+            for template in templates:
+                subject_code = BASE_CODE + template.pk
+                _, created = Subject.objects.get_or_create(
+                    subject_template=template,
+                    defaults={
+                        'name': template.name[:50],
+                        'subject_code': subject_code,
+                        'theory_marks': template.default_theory_marks,
+                        'practical_marks': template.default_practical_marks,
+                        'created_by': created_by,
+                    },
+                )
+                if created:
+                    subjects_created += 1
+
+        for dept in departments:
+            templates = get_subjects_for_level(
+                curriculum,
+                sem_num,
                 stream=dept.name.strip() if dept.name else None,
             )
             if not templates:

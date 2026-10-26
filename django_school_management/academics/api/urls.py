@@ -1,8 +1,8 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django_school_management.api.routers import DefaultRouterWithoutFormatSuffixes
 
 # Create router and register viewsets here
-router = DefaultRouter()
+router = DefaultRouterWithoutFormatSuffixes()
 # router.register(r'departments', DepartmentViewSet, basename='department')
 # router.register(r'batches', BatchViewSet, basename='batch')
 # router.register(r'subjects', SubjectViewSet, basename='subject')

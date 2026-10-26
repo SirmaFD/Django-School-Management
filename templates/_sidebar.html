@@ -53,6 +53,26 @@
         </a>
       </li>
 
+      {% if has_ecde_access %}
+      <li class="nav-label">County ECDE</li>
+      <li class="nav-item dropdown">
+        <a class="dropdown-toggle" href="javascript:void(0);">
+          <span class="icon-holder"><i class="fas fa-child"></i></span>
+          <span class="title">ECDE</span>
+          <span class="arrow"><i class="ti-angle-right"></i></span>
+        </a>
+        <ul class="dropdown-menu">
+          {% for menu_item in ecde_menu_items %}
+          <li>
+            <a class="sidebar-link" href="{{ menu_item.url }}">
+              {{ menu_item.title }}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </li>
+      {% endif %}
+
       {% if user|has_role:'academic_officer, admin' %}
       <!-- ACADEMICS LABEL -->
       <li class="nav-label">Academics</li>
@@ -134,6 +154,20 @@
           <span class="arrow"><i class="ti-angle-right"></i></span>
         </a>
         <ul class="dropdown-menu">
+          {% if has_ecde_access %}
+          <li>
+            <a class="sidebar-link" href="{% url 'teachers:all_teacher' %}">
+              ECDE Teaching Staff
+            </a>
+          </li>
+          {% endif %}
+          {% if can_manage_ecde %}
+          <li>
+            <a class="sidebar-link" href="{% url 'ecde:manage_staff' %}">
+              Manage ECDE staff access
+            </a>
+          </li>
+          {% endif %}
           {% for menu_item in teacher_menu_items %}
             <li>
               <a class="sidebar-link" href="{{ menu_item.url }}">

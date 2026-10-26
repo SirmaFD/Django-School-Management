@@ -1,0 +1,101 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'account:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item active" aria-current="page">County ECDE</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+  <div>
+    <h4 class="mb-1">County ECDE</h4>
+    <p class="text-muted mb-0">Centres and activity across your assigned area.</p>
+  </div>
+  {% if can_manage_ecde %}
+    <a class="btn btn-outline-primary mt-2" href="{% url 'ecde:manage' %}">
+      <i class="fas fa-cog mr-1"></i> Manage administrative areas
+    </a>
+    <a class="btn btn-primary mt-2 ml-2" href="{% url 'ecde:manage_centres' %}">
+      <i class="fas fa-school mr-1"></i> Manage centres
+    </a>
+  {% endif %}
+  <a class="btn btn-outline-primary mt-2 ml-2" href="{% url 'ecde:audit_log' %}">
+    <i class="fas fa-clipboard-list mr-1"></i> Activity history
+  </a>
+</div>
+
+<div class="row gap-20 mb-3">
+  <div class="col-md-3 col-sm-6">
+    <div class="layers bd bgc-white p-20 h-100">
+      <div class="text-muted">Centres</div>
+      <h3 class="mb-0">{{ summary.centre_count }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="layers bd bgc-white p-20 h-100">
+      <div class="text-muted">Active children</div>
+      <h3 class="mb-0">{{ summary.active_children }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="layers bd bgc-white p-20 h-100">
+      <div class="text-muted">Attendance recorded today</div>
+      <h3 class="mb-0">{{ summary.attendance_today }}</h3>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6">
+    <div class="layers bd bgc-white p-20 h-100">
+      <div class="text-muted">CBC observations today</div>
+      <h3 class="mb-0">{{ summary.progress_today }}</h3>
+    </div>
+  </div>
+</div>
+
+<div class="layers bd bgc-white p-20">
+  <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+    <h5 class="mb-0">Centres in your assigned area</h5>
+    <span class="text-muted">{{ centres|length }} centre{{ centres|length|pluralize }}</span>
+  </div>
+  {% if centres %}
+    <div class="table-responsive">
+      <table class="table table-sm table-striped table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Centre</th>
+            <th>County</th>
+            <th>Sub-county</th>
+            <th>Ward</th>
+            <th>Active children</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+      {% for centre in centres %}
+          <tr>
+            <td>{{ centre.name }}</td>
+            <td>{{ centre.ward.subcounty.county.name }}</td>
+            <td>{{ centre.ward.subcounty.name }}</td>
+            <td>{{ centre.ward.name }}</td>
+            <td>{{ centre.active_children_count }}</td>
+            <td>
+              <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Centre workflows">
+                <a class="btn btn-outline-primary" href="{% url 'ecde:children' centre.pk %}">Children</a>
+                <a class="btn btn-outline-primary" href="{% url 'ecde:attendance' centre.pk %}">Attendance</a>
+                <a class="btn btn-outline-primary" href="{% url 'ecde:progress' centre.pk %}">CBC progress</a>
+                <a class="btn btn-outline-primary" href="{% url 'ecde:resources' centre.pk %}">Planning &amp; resources</a>
+              </div>
+            </td>
+          </tr>
+      {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info mb-0">
+      No active centres are assigned to your account. Ask an administrator to configure your county area and ECDE role.
+    </div>
+  {% endif %}
+</div>
+{% endblock dashboard-body %}

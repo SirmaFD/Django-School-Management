@@ -8,6 +8,10 @@ from django_school_management.institute.models import (
     ListWidget,
 )
 from django_school_management.articles.models import Category
+from django_school_management.ecde.access import accessible_centres
+from django_school_management.ecde.management import can_manage_ecde
+from django_school_management.ecde.models import ECDEMembership
+from django.urls import reverse
 
 
 def attach_institute_data_ctx_processor(request):
@@ -71,11 +75,81 @@ def attach_dashboard_menu_items(request):
         teacher_menu_items = menu_service.get_menu_items(
             "teacher", request.user
         )
+        has_ecde_access = request.user.is_superuser or ECDEMembership.objects.filter(
+            user=request.user,
+            is_active=True,
+        ).exists()
+        ecde_menu_items = []
+        if has_ecde_access:
+            ecde_menu_items.append({
+                "title": "ECDE dashboard",
+                "url": reverse("ecde:dashboard"),
+            })
+            if can_manage_ecde(request.user):
+                ecde_menu_items.extend([
+                    {
+                        "title": "Manage administrative areas",
+                        "url": reverse("ecde:manage"),
+                    },
+                    {
+                        "title": "Manage counties",
+                        "url": reverse("ecde:manage_counties"),
+                    },
+                    {
+                        "title": "Manage sub-counties",
+                        "url": reverse("ecde:manage_subcounties"),
+                    },
+                    {
+                        "title": "Manage wards",
+                        "url": reverse("ecde:manage_wards"),
+                    },
+                    {
+                        "title": "Manage centres",
+                        "url": reverse("ecde:manage_centres"),
+                    },
+                    {
+                        "title": "Add ECDE centre",
+                        "url": reverse("ecde:add_centre"),
+                    },
+                    {
+                        "title": "County supply stock & distribution",
+                        "url": reverse("ecde:county_supply_stock"),
+                    },
+                ])
+            ecde_menu_items.append({
+                "title": "Activity history",
+                "url": reverse("ecde:audit_log"),
+            })
+            for centre in accessible_centres(request.user).order_by("name"):
+                ecde_menu_items.extend([
+                    {
+                        "title": f"{centre.name} / Learners",
+                        "url": reverse("ecde:children", args=[centre.pk]),
+                    },
+                    {
+                        "title": f"{centre.name} / Attendance",
+                        "url": reverse("ecde:attendance", args=[centre.pk]),
+                    },
+                    {
+                        "title": f"{centre.name} / CBC progress",
+                        "url": reverse("ecde:progress", args=[centre.pk]),
+                    },
+                    {
+                        "title": f"{centre.name} / Planning & resources",
+                        "url": reverse("ecde:resources", args=[centre.pk]),
+                    },
+                ])
         return dict(
             student_menu_items=student_menu_items,
             teacher_menu_items=teacher_menu_items,
+            has_ecde_access=has_ecde_access,
+            can_manage_ecde=can_manage_ecde(request.user),
+            ecde_menu_items=ecde_menu_items,
         )
     return dict(
         student_menu_items=[],
         teacher_menu_items=[],
+        has_ecde_access=False,
+        can_manage_ecde=False,
+        ecde_menu_items=[],
     )

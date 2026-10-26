@@ -4,6 +4,7 @@ from django_countries.fields import CountryField
 
 from django_school_management.institute.models import (
     InstituteProfile,
+    INSTITUTE_TYPE_SCHOOL,
     INSTITUTE_TYPE_CHOICES,
 )
 from django_school_management.academics.models import Department, AcademicSession
@@ -35,8 +36,21 @@ class OnboardingStep1Form(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Show institute types in onboarding priority order: school, madrasah, polytechnic
-        self.fields['institute_type'].choices = [('', '---------')] + list(INSTITUTE_TYPE_CHOICES)
+        choices = [
+            ('', '---------'),
+            (
+                INSTITUTE_TYPE_SCHOOL,
+                'Kenyan CBC School (Pre-Primary)',
+            ),
+        ]
+        current_type = getattr(self.instance, 'institute_type', None)
+        if current_type and current_type != INSTITUTE_TYPE_SCHOOL:
+            legacy_choices = dict(INSTITUTE_TYPE_CHOICES)
+            choices.append((current_type, legacy_choices[current_type]))
+        self.fields['institute_type'].choices = choices
+        if not self.instance.pk:
+            self.fields['institute_type'].initial = INSTITUTE_TYPE_SCHOOL
+            self.fields['country'].initial = 'KE'
         if 'country' in self.fields:
             self.fields['country'].widget.attrs.update(FC)
 
@@ -78,7 +92,7 @@ class OnboardingAcademicSessionForm(forms.ModelForm):
 
 
 class LoadSubjectsFromCurriculumForm(forms.Form):
-    """Select curriculum and class range for loading subjects during onboarding."""
+    """Select a curriculum and its levels for loading subjects during onboarding."""
 
     curriculum = forms.ModelChoiceField(
         queryset=None,
@@ -89,40 +103,55 @@ class LoadSubjectsFromCurriculumForm(forms.Form):
     )
     class_range = forms.MultipleChoiceField(
         required=True,
-        choices=[
-            ('1-5', 'Class 1–5 (Ebtedayi / Primary)'),
-            ('6-10', 'Class 6–10 (Dakhil / SSC)'),
-            ('1-10', 'Class 1–10 (Full SSC)'),
-            ('11-12', 'Class 11–12 (HSC)'),
-        ],
+        choices=(),
         widget=forms.CheckboxSelectMultiple,
-        label='Classes to load subjects for',
+        label='Classes / levels to set up',
     )
 
     def __init__(self, *args, **kwargs):
         self.institute = kwargs.pop('institute', None)
         super().__init__(*args, **kwargs)
+        from django_school_management.curriculum.models import Curriculum
+
         if self.institute:
-            from django_school_management.curriculum.models import Curriculum
             qs = Curriculum.objects.filter(is_active=True)
             itype = getattr(self.institute, 'institute_type', None)
             if itype:
                 qs = qs.filter(models.Q(institute_type=itype) | models.Q(institute_type=''))
-            self.fields['curriculum'].queryset = qs.order_by('display_order', 'name')
+            country = getattr(self.institute, 'country', None)
+            country_code = getattr(country, 'code', str(country) if country else '')
+            if country_code == 'KE':
+                qs = qs.filter(
+                    models.Q(code__startswith='KE-')
+                    | models.Q(board__country='KE')
+                )
         else:
-            from django_school_management.curriculum.models import Curriculum
-            self.fields['curriculum'].queryset = Curriculum.objects.filter(is_active=True).order_by('display_order', 'name')
+            qs = Curriculum.objects.filter(is_active=True)
+
+        qs = qs.prefetch_related('levels').order_by('display_order', 'name')
+        self.fields['curriculum'].queryset = qs
+        self.curriculum_level_choices = {
+            str(curriculum.pk): [
+                {
+                    'value': str(level.level_number),
+                    'label': level.name,
+                }
+                for level in curriculum.levels.all()
+            ]
+            for curriculum in qs
+        }
+
+        selected_curriculum = (
+            self.data.get('curriculum') if self.is_bound
+            else self.initial.get('curriculum')
+        )
+        selected_levels = self.curriculum_level_choices.get(
+            str(selected_curriculum), []
+        )
+        self.fields['class_range'].choices = [
+            (level['value'], level['label']) for level in selected_levels
+        ]
 
     def get_class_numbers(self):
-        """Expand class_range choices to list of ints."""
-        numbers = set()
-        for r in self.cleaned_data.get('class_range', []):
-            if r == '1-5':
-                numbers.update(range(1, 6))
-            elif r == '6-10':
-                numbers.update(range(6, 11))
-            elif r == '1-10':
-                numbers.update(range(1, 11))
-            elif r == '11-12':
-                numbers.update(range(11, 13))
-        return sorted(numbers)
+        """Return selected curriculum level numbers."""
+        return sorted(int(number) for number in self.cleaned_data['class_range'])

@@ -1,0 +1,135 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'account:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ecde:dashboard' %}">County ECDE</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ecde:children' centre.pk %}">{{ centre.name }} learners</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ child.first_name }} {{ child.last_name }}</li>
+  </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+  <div>
+    <h4 class="mb-1">{{ child.first_name }} {% if child.middle_names %}{{ child.middle_names }} {% endif %}{{ child.last_name }}</h4>
+    <p class="text-muted mb-0">{{ centre.name }} · {{ child.get_level_display }} · {{ child.get_status_display }}</p>
+  </div>
+  <a class="btn btn-outline-secondary mt-2" href="{% url 'ecde:children' centre.pk %}">
+    <i class="fas fa-arrow-left mr-1"></i> Back to learner register
+  </a>
+</div>
+
+<div class="row">
+  <div class="col-xl-6 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Learner details</h5>
+      <dl class="row mb-0">
+        <dt class="col-sm-5">Learner number</dt><dd class="col-sm-7">{{ child.learner_number|default:"—" }}</dd>
+        <dt class="col-sm-5">Admission number</dt><dd class="col-sm-7">{{ child.admission_number|default:"—" }}</dd>
+        <dt class="col-sm-5">Date of birth</dt><dd class="col-sm-7">{{ child.date_of_birth }}</dd>
+        <dt class="col-sm-5">Gender</dt><dd class="col-sm-7">{{ child.get_gender_display }}</dd>
+        <dt class="col-sm-5">Enrolment date</dt><dd class="col-sm-7">{{ child.enrollment_date }}</dd>
+        <dt class="col-sm-5">Guardian</dt><dd class="col-sm-7">{{ child.guardian_name }}{% if child.guardian_relationship %} ({{ child.guardian_relationship }}){% endif %}</dd>
+        <dt class="col-sm-5">Guardian phone</dt><dd class="col-sm-7">{{ child.guardian_phone }}</dd>
+        <dt class="col-sm-5">Guardian email</dt><dd class="col-sm-7">{{ child.guardian_email|default:"—" }}</dd>
+        <dt class="col-sm-5">Alternate guardian</dt><dd class="col-sm-7">{{ child.alternate_guardian_name|default:"—" }}{% if child.alternate_guardian_phone %}<br>{{ child.alternate_guardian_phone }}{% endif %}</dd>
+        <dt class="col-sm-5">Home village</dt><dd class="col-sm-7">{{ child.home_village|default:"—" }}</dd>
+        {% if child.exit_date %}
+          <dt class="col-sm-5">Exit date</dt><dd class="col-sm-7">{{ child.exit_date }}</dd>
+          <dt class="col-sm-5">Exit reason</dt><dd class="col-sm-7">{{ child.exit_reason|default:"—" }}</dd>
+        {% endif %}
+      </dl>
+      {% if can_edit %}
+        <details class="mt-3">
+          <summary class="btn btn-outline-primary btn-sm">Edit learner details</summary>
+          <form method="post" class="border rounded p-3 mt-2">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="form-row">
+              {% for field in form %}
+                <div class="form-group col-md-6">
+                  <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                  {{ field }}
+                  {{ field.errors }}
+                </div>
+              {% endfor %}
+            </div>
+            <button class="btn btn-primary" type="submit">Save learner details</button>
+          </form>
+        </details>
+      {% endif %}
+    </section>
+  </div>
+
+  <div class="col-xl-6 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Centre transfer history</h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped">
+          <thead><tr><th>Date</th><th>From</th><th>To</th><th>Level</th></tr></thead>
+          <tbody>
+          {% for transfer in transfers %}
+            <tr>
+              <td>{{ transfer.transfer_date }}</td>
+              <td>{{ transfer.from_centre.name }}</td>
+              <td>{{ transfer.to_centre.name }}</td>
+              <td>{{ transfer.from_level }} → {{ transfer.to_level }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="text-muted">No transfers recorded.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="col-xl-6 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Recent attendance</h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped">
+          <thead><tr><th>Date</th><th>Status</th><th>Recorded by</th></tr></thead>
+          <tbody>
+          {% for record in attendance_records %}
+            <tr>
+              <td>{{ record.date }}</td>
+              <td>{{ record.get_status_display }}</td>
+              <td>{{ record.recorded_by|default:"—" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3" class="text-muted">No attendance records available.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'ecde:attendance' centre.pk %}">Open centre attendance</a>
+    </section>
+  </div>
+
+  <div class="col-xl-6 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Recent CBC observations</h5>
+      <div class="table-responsive">
+        <table class="table table-sm table-striped">
+          <thead><tr><th>Date</th><th>Learning area</th><th>Progress</th><th>Observation</th></tr></thead>
+          <tbody>
+          {% for record in progress_records %}
+            <tr>
+              <td>{{ record.evidence_date }}</td>
+              <td>{{ record.get_learning_area_display }}</td>
+              <td>{{ record.get_progress_display }}</td>
+              <td>{{ record.observation }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="text-muted">No CBC observations available.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <a class="btn btn-sm btn-outline-primary" href="{% url 'ecde:progress' centre.pk %}">Open CBC progress</a>
+    </section>
+  </div>
+</div>
+{% endblock dashboard-body %}

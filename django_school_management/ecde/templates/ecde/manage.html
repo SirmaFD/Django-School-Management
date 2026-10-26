@@ -1,0 +1,50 @@
+{% extends 'dashboard.html' %}
+{% block dashboard-body %}
+{% include 'ecde/_messages.html' %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{% url 'account:dashboard' %}">Dashboard</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'ecde:dashboard' %}">County ECDE</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Administrative areas</li>
+  </ol>
+</nav>
+
+<div class="mb-4">
+  <h4 class="mb-1">Administrative areas</h4>
+  <p class="text-muted">Manage the county hierarchy—counties, sub-counties, and wards—on separate pages.</p>
+</div>
+{% if legacy_form_errors and legacy_form_errors.errors %}
+<div class="alert alert-danger" role="alert">{{ legacy_form_errors.errors }}</div>
+{% endif %}
+
+<div class="row">
+  {% if can_create_county %}
+  <div class="col-lg-4 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Counties</h5>
+      <p class="text-muted">{{ county_count }} in your management scope</p>
+      <a class="btn btn-primary" href="{% url 'ecde:manage_counties' %}">Manage counties</a>
+    </section>
+  </div>
+  {% endif %}
+  <div class="col-lg-4 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Sub-counties</h5>
+      <p class="text-muted">{{ subcounty_count }} in your management scope</p>
+      <a class="btn btn-primary" href="{% url 'ecde:manage_subcounties' %}">Manage sub-counties</a>
+    </section>
+  </div>
+  <div class="col-lg-4 mb-3">
+    <section class="layers bd bgc-white p-20 h-100">
+      <h5>Wards</h5>
+      <p class="text-muted">{{ ward_count }} in your management scope</p>
+      <a class="btn btn-primary" href="{% url 'ecde:manage_wards' %}">Manage wards</a>
+    </section>
+  </div>
+</div>
+
+<div class="mt-3">
+  <a class="btn btn-outline-primary" href="{% url 'ecde:manage_centres' %}">Manage ECDE centres</a>
+  <a class="btn btn-outline-secondary ml-2" href="{% url 'ecde:audit_log' %}">Activity history</a>
+</div>
+{% endblock dashboard-body %}

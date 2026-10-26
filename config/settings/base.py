@@ -61,6 +61,7 @@ LOCAL_APPS = [
     'django_school_management.articles.apps.ArticlesConfig',
     'django_school_management.institute.apps.InstituteConfig',
     'django_school_management.curriculum.apps.CurriculumConfig',
+    'django_school_management.ecde.apps.ECDEConfig',
     'django_school_management.payments.apps.PaymentsConfig',
     'django_school_management.notices.apps.NoticesConfig',
 ]
@@ -109,6 +110,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -143,17 +145,22 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database (django_prometheus backend for query/connection metrics)
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django_prometheus.db.backends.postgresql',
+#         'NAME': env('DB_NAME'),
+#         'USER': env('DB_USER'),
+#         'PASSWORD': env('DB_PASSWORD'),
+#         'HOST': env('DB_HOST'),
+#         'PORT': 5432,
+#     }
+# }
 DATABASES = {
     'default': {
-        'ENGINE': 'django_prometheus.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': 5432,
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
-
+}   
 # Cache (django_prometheus backend for hit/miss/fail metrics)
 CACHES = {
     'default': {
@@ -332,6 +339,9 @@ TAGGIT_CASE_INSENSITIVE = True
 # =========================== PAYMENTS ===========================
 # BRAINTREE FOR HANDLING PAYMENTS
 USE_PAYMENT_OPTIONS = env('USE_PAYMENT_OPTIONS')
+STORE_ID = env('STORE_ID', default='')
+STORE_PASS = env('STORE_PASS', default='')
+SSL_ISSANDBOX = env('SSL_ISSANDBOX')
 
 if USE_PAYMENT_OPTIONS:
     try:
